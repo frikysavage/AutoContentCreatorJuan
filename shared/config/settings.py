@@ -2,11 +2,12 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     DATABASE_URL: str = "postgresql://postgres:postgres@localhost:5432/autocontent"
-    VIDEO_PROVIDER: str = "vidu"
+    VIDEO_PROVIDER: str = "veo"
     PUBLIC_BASE_URL: str = "http://localhost:8000"
     GOOGLE_AI_STUDIO_API_KEY: str = ""
     VIDU_API_KEY: str = ""
-    TTS_API_KEY: str = ""
+    GOOGLE_CLOUD_PROJECT_ID: str = ""
+    GOOGLE_APPLICATION_CREDENTIALS: str = "gcp-service-account.json"
     YOUTUBE_CLIENT_ID: str = ""
     YOUTUBE_CLIENT_SECRET: str = ""
 
