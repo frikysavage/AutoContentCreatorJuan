@@ -1,0 +1,229 @@
+{
+  "name": "VideoGenerationWorkflow",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "Video Generator Form",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Tema",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Account ID",
+              "fieldType": "number",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Musica",
+              "defaultValue": "Cualquier estilo"
+            },
+            {
+              "fieldLabel": "Subtitulos",
+              "fieldType": "dropdown",
+              "optionsList": {
+                "values": [
+                  { "name": "Si", "value": "true" },
+                  { "name": "No", "value": "false" }
+                ]
+              },
+              "defaultValue": "true"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "2d1a3c74-e8b9-4c12-9c3f-4e08a6d445c0",
+      "name": "n8n Form Trigger",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 1,
+      "position": [ 250, 300 ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=SELECT * FROM accounts WHERE id = {{$json.AccountID}};"
+      },
+      "id": "3a1b4c75-e8b9-4c12-9c3f-4e08a6d445c1",
+      "name": "Postgres Lookup",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 1,
+      "position": [ 450, 300 ],
+      "credentials": {
+        "postgres": {
+          "id": "postgres-cred-id",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://script-service:8000/generate-script",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "account_id", "value": "={{$node['n8n Form Trigger'].json['Account ID']}}" },
+            { "name": "tema", "value": "={{$node['n8n Form Trigger'].json['Tema']}}" },
+            { "name": "musica", "value": "={{$node['n8n Form Trigger'].json['Musica']}}" },
+            { "name": "subtitulos", "value": "={{$node['n8n Form Trigger'].json['Subtitulos'] === 'true'}}" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "4a1c5d76-e8b9-4c12-9c3f-4e08a6d445c2",
+      "name": "Script Service",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [ 650, 300 ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://video-service:8000/generate-visuals",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "guion", "value": "={{$json['guion']}}" },
+            { "name": "personajes", "value": "={{$json['personajes']}}" },
+            { "name": "ficha_personaje", "value": "={{$json['ficha_personaje']}}" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "5b2d6e77-e8b9-4c12-9c3f-4e08a6d445c3",
+      "name": "Video Service",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [ 850, 300 ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://assembly-service:8000/assemble",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "clips", "value": "={{$json['clips']}}" },
+            { "name": "guion", "value": "={{$node['Script Service'].json['guion']}}" },
+            { "name": "subtitulos", "value": "={{$node['n8n Form Trigger'].json['Subtitulos'] === 'true'}}" },
+            { "name": "musica", "value": "={{$node['n8n Form Trigger'].json['Musica']}}" },
+            { "name": "idioma", "value": "={{$node['Postgres Lookup'].json['idioma_default']}}" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "6c3e7f78-e8b9-4c12-9c3f-4e08a6d445c4",
+      "name": "Assembly Service",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [ 1050, 300 ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://publish-service:8000/upload-for-review",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "video_path", "value": "={{$json['video_path']}}" },
+            { "name": "account_id", "value": "={{$node['n8n Form Trigger'].json['Account ID']}}" },
+            { "name": "titulo_seo", "value": "={{$node['Script Service'].json['titulo_seo']}}" },
+            { "name": "descripcion", "value": "={{$node['Script Service'].json['resumen_para_historial']}}" },
+            { "name": "synthetic_content", "value": "={{$node['Script Service'].json['synthetic_content']}}" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "7d4f8g79-e8b9-4c12-9c3f-4e08a6d445c5",
+      "name": "Publish Service",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [ 1250, 300 ]
+    },
+    {
+      "parameters": {
+        "fromEmail": "bot@autocontent.local",
+        "toEmail": "admin@autocontent.local",
+        "subject": "={{'Video listo para revisión: ' + $node['Script Service'].json['titulo_seo']}}",
+        "text": "={{'El video está listo para revisión.\\n\\nVer video: ' + $json['unlisted_url'] + '\\n\\nAprobar: ' + $json['confirm_url'] + '\\n\\nRechazar: ' + $json['reject_url']}}"
+      },
+      "id": "8e5g9h80-e8b9-4c12-9c3f-4e08a6d445c6",
+      "name": "Send Email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 1,
+      "position": [ 1450, 300 ],
+      "credentials": {
+        "smtp": {
+          "id": "smtp-cred-id",
+          "name": "SMTP account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "id": "9f6h0i81-e8b9-4c12-9c3f-4e08a6d445c7",
+      "name": "Error Trigger",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [ 250, 500 ]
+    },
+    {
+      "parameters": {
+        "fromEmail": "bot@autocontent.local",
+        "toEmail": "admin@autocontent.local",
+        "subject": "Error en workflow de video",
+        "text": "={{'Ocurrió un error en el workflow:\\n\\n' + $json['error']['message']}}"
+      },
+      "id": "0g7i1j82-e8b9-4c12-9c3f-4e08a6d445c8",
+      "name": "Send Error Email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 1,
+      "position": [ 450, 500 ],
+      "credentials": {
+        "smtp": {
+          "id": "smtp-cred-id",
+          "name": "SMTP account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "n8n Form Trigger": {
+      "main": [
+        [ { "node": "Postgres Lookup", "type": "main", "index": 0 } ]
+      ]
+    },
+    "Postgres Lookup": {
+      "main": [
+        [ { "node": "Script Service", "type": "main", "index": 0 } ]
+      ]
+    },
+    "Script Service": {
+      "main": [
+        [ { "node": "Video Service", "type": "main", "index": 0 } ]
+      ]
+    },
+    "Video Service": {
+      "main": [
+        [ { "node": "Assembly Service", "type": "main", "index": 0 } ]
+      ]
+    },
+    "Assembly Service": {
+      "main": [
+        [ { "node": "Publish Service", "type": "main", "index": 0 } ]
+      ]
+    },
+    "Publish Service": {
+      "main": [
+        [ { "node": "Send Email", "type": "main", "index": 0 } ]
+      ]
+    },
+    "Error Trigger": {
+      "main": [
+        [ { "node": "Send Error Email", "type": "main", "index": 0 } ]
+      ]
+    }
+  }
+}
