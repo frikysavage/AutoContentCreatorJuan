@@ -37,8 +37,12 @@ services:
     ports:
       - "8002:8000"
     environment:
-      - VIDEO_PROVIDER=${VIDEO_PROVIDER:-vidu}
+      - VIDEO_PROVIDER=${VIDEO_PROVIDER:-veo}
       - VIDU_API_KEY=${VIDU_API_KEY}
+      - GOOGLE_CLOUD_PROJECT_ID=${GOOGLE_CLOUD_PROJECT_ID}
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/gcp-service-account.json
+    volumes:
+      - ./gcp-service-account.json:/app/gcp-service-account.json:ro
     
   assembly-service:
     build:
@@ -47,7 +51,7 @@ services:
     ports:
       - "8003:8000"
     environment:
-      - TTS_API_KEY=${TTS_API_KEY}
+      - GOOGLE_AI_STUDIO_API_KEY=${GOOGLE_AI_STUDIO_API_KEY}
 
   publish-service:
     build:
@@ -63,6 +67,16 @@ services:
     depends_on:
       db:
         condition: service_healthy
+
+  ngrok:
+    image: ngrok/ngrok:latest
+    environment:
+      - NGROK_AUTHTOKEN=${NGROK_AUTHTOKEN}
+    command: http publish-service:8000
+    ports:
+      - "4040:4040"
+    depends_on:
+      - publish-service
 
 volumes:
   pgdata:

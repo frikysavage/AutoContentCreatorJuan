@@ -4,6 +4,7 @@ from typing import List, Dict, Optional
 
 from shared.config.settings import settings
 from services.video_service.providers.vidu import ViduProvider
+from services.video_service.providers.veo import VeoProvider
 
 app = FastAPI(title="Video Service")
 
@@ -15,11 +16,13 @@ class VisualsRequest(BaseModel):
 
 def get_provider():
     provider_name = settings.VIDEO_PROVIDER.lower()
-    if provider_name == "vidu":
+    if provider_name == "veo":
+        return VeoProvider()
+    elif provider_name == "vidu":
         return ViduProvider()
     else:
-        # Fallback or other providers
-        return ViduProvider()
+        # Fallback to Veo
+        return VeoProvider()
 
 @app.post("/generate-visuals")
 def generate_visuals(req: VisualsRequest):

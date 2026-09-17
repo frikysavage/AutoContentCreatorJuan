@@ -6,43 +6,42 @@ Este proyecto es un pipeline de generación automatizada de videos cortos para r
 
 - **n8n**: Orquestador principal.
 - **script_service** (`:8001`): Genera el guion y ficha de personaje usando Google AI Studio (Gemini).
-- **video_service** (`:8002`): Genera los clips de video visuales usando Vidu.
-- **assembly_service** (`:8003`): Ensambla clips, audio TTS y subtítulos usando FFmpeg.
+- **video_service** (`:8002`): Genera los clips de video visuales usando Google Veo vía Vertex AI.
+- **assembly_service** (`:8003`): Ensambla clips, audio TTS (Gemini) y subtítulos usando FFmpeg.
 - **publish_service** (`:8004`): Sube el video a YouTube como "No listado" y maneja la confirmación/rechazo para hacerlo público.
 - **Postgres**: Base de datos compartida para guardar configuración de cuentas, historial de videos y fichas de personajes.
+- **ngrok**: Expone el `publish_service` a internet automáticamente usando tu authtoken.
 
 ## Requisitos Previos
 
 - Docker y Docker Compose
 - Python 3.11 (para desarrollo local fuera de Docker)
 - n8n (puede correrse localmente con `npx n8n` o en Docker)
+- Cuenta de Google Cloud con API Vertex AI habilitada (archivo de cuenta de servicio `.json`).
 
 ## Instalación y Configuración
 
 1. **Variables de Entorno**
-   Copia el archivo `.env.example` a `.env` y llena los valores de las APIs externas:
+   Copia el archivo `.env.example` a `.env` y llena los valores de las APIs externas (Google AI Studio, ngrok, YouTube, GCP Project ID):
    ```bash
    cp .env.example .env
    ```
 
-2. **Levantar Servicios**
-   Ejecuta Docker Compose para levantar Postgres y todos los microservicios:
+2. **Cuenta de Servicio de Google Cloud (Vertex AI)**
+   Renombra tu archivo JSON de cuenta de servicio de Google Cloud a `gcp-service-account.json` y colócalo en la raíz de este proyecto. El archivo está ignorado por Git por seguridad.
+
+3. **Levantar Servicios**
+   Ejecuta Docker Compose para levantar Postgres, ngrok, y todos los microservicios:
    ```bash
    docker-compose up -d --build
    ```
+   *Nota: Ngrok expondrá automáticamente el puerto de publish-service.*
 
-3. **Migraciones de Base de Datos**
+4. **Migraciones de Base de Datos**
    Las tablas se deben crear usando Alembic. Desde la raíz del proyecto (requiere tener el entorno virtual local configurado):
    ```bash
    python -m alembic upgrade head
    ```
-
-4. **Túnel Público (Ngrok / Cloudflare Tunnel)**
-   Para que los botones de "Aprobar" y "Rechazar" en los correos funcionen cuando corres localmente, necesitas exponer el `publish_service` a internet.
-   ```bash
-   ngrok http 8004
-   ```
-   Copia la URL pública y ponla en la variable `PUBLIC_BASE_URL` de tu `.env`.
 
 ## n8n Workflow
 
