@@ -20,7 +20,7 @@ services:
   script-service:
     build:
       context: .
-      dockerfile: services/script-service/Dockerfile
+      dockerfile: services/script_service/Dockerfile
     ports:
       - "8001:8000"
     environment:
@@ -33,7 +33,7 @@ services:
   video-service:
     build:
       context: .
-      dockerfile: services/video-service/Dockerfile
+      dockerfile: services/video_service/Dockerfile
     ports:
       - "8002:8000"
     environment:
@@ -43,7 +43,7 @@ services:
   assembly-service:
     build:
       context: .
-      dockerfile: services/assembly-service/Dockerfile
+      dockerfile: services/assembly_service/Dockerfile
     ports:
       - "8003:8000"
     environment:
@@ -52,7 +52,7 @@ services:
   publish-service:
     build:
       context: .
-      dockerfile: services/publish-service/Dockerfile
+      dockerfile: services/publish_service/Dockerfile
     ports:
       - "8004:8000"
     environment:
